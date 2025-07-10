@@ -8,6 +8,7 @@
   environment.systemPackages = [
     pkgs.vim
     pkgs.git
+    pkgs.surrealdb
   ];
 
   fileSystems."/" = {
@@ -54,7 +55,31 @@
     };
   };
 
-  networking.firewall.allowedTCPPorts = [ 22 ];
+# Add systemd services for SurrealDB and VisitFlow
+systemd.services.surrealdb = {
+  description = "SurrealDB service";
+  after = [ "network.target" ];
+  wantedBy = [ "multi-user.target" ];
+  serviceConfig = {
+    ExecStart = "${pkgs.surrealdb}/bin/surreal start --user root --pass root --bind 0.0.0.0:8000 file://var/lib/surrealdb/data.db";
+    Restart = "always";
+    User = "surrealdb";
+    Group = "surrealdb";
+    StateDirectory = "surrealdb";
+  };
+};
+
+users.users.surrealdb = {
+  isSystemUser = true;
+  group = "surrealdb";
+  home = "/var/lib/surrealdb";
+  createHome = true;
+};
+
+users.groups.surrealdb = {};
+
+# Open firewall for the application
+networking.firewall.allowedTCPPorts = [ 22 8080 8000 ];
 
   system.stateVersion = "25.05";
 }
