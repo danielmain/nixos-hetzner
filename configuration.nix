@@ -34,7 +34,7 @@
 
   users.users = {
     root.hashedPassword = "!"; # Disable root login
-    username = { # Replace 'username' with your desired username
+    daniel = { 
       isNormalUser = true;
       extraGroups = [ "wheel" ];
       openssh.authorizedKeys.keys = [
