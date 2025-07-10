@@ -35,7 +35,7 @@
 
   users.users = {
     root.hashedPassword = "!"; # Disable root login
-    daniel = { 
+    daniel = {
       isNormalUser = true;
       extraGroups = [ "wheel" ];
       openssh.authorizedKeys.keys = [
@@ -55,31 +55,54 @@
     };
   };
 
-# Add systemd services for SurrealDB and VisitFlow
-systemd.services.surrealdb = {
-  description = "SurrealDB service";
-  after = [ "network.target" ];
-  wantedBy = [ "multi-user.target" ];
-  serviceConfig = {
-    ExecStart = "${pkgs.surrealdb}/bin/surreal start --user root --pass root --bind 0.0.0.0:8000 file://var/lib/surrealdb/data.db";
-    Restart = "always";
-    User = "surrealdb";
-    Group = "surrealdb";
-    StateDirectory = "surrealdb";
+  systemd.services.surrealdb = {
+    description = "SurrealDB service";
+    after = [ "network.target" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      ExecStart = "${pkgs.surrealdb}/bin/surreal start --user root --pass root --bind 0.0.0.0:8000 file://var/lib/surrealdb/data.db";
+      Restart = "always";
+      User = "surrealdb";
+      Group = "surrealdb";
+      StateDirectory = "surrealdb";
+    };
   };
-};
 
-users.users.surrealdb = {
-  isSystemUser = true;
-  group = "surrealdb";
-  home = "/var/lib/surrealdb";
-  createHome = true;
-};
+  users.users.surrealdb = {
+    isSystemUser = true;
+    group = "surrealdb";
+    home = "/var/lib/surrealdb";
+    createHome = true;
+  };
 
-users.groups.surrealdb = {};
+  users.groups.surrealdb = {};
 
-# Open firewall for the application
-networking.firewall.allowedTCPPorts = [ 22 8080 8000 ];
+  systemd.services.visitflow = {
+    description = "VisitFlow Backend service";
+    after = [ "network.target" "surrealdb.service" ];
+    wants = [ "surrealdb.service" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      ExecStart = "/var/lib/visitflow/visitflow-backend";
+      Restart = "always";
+      User = "visitflow";
+      Group = "visitflow";
+      WorkingDirectory = "/var/lib/visitflow";
+      EnvironmentFile = "/etc/visitflow/environment";
+    };
+  };
+
+  users.users.visitflow = {
+    isSystemUser = true;
+    group = "visitflow";
+    home = "/var/lib/visitflow";
+    createHome = true;
+  };
+
+  users.groups.visitflow = {};
+
+  # Open firewall for the application
+  networking.firewall.allowedTCPPorts = [ 22 8080 8000 ];
 
   system.stateVersion = "25.05";
 }
