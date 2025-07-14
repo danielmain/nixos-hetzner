@@ -1,17 +1,27 @@
-{ pkgs, ... }:
+=== Project Code Analysis Prompt ===
 
+File Structure:
+
+  configuration.nix
+  flake.nix
+
+Instructions:
+Analyze the following source code by describing its structure, key components, and functionality in detail. Do not summarize, generate code, or perform other tasks. Focus only on analysis. Use the file structure above to contextualize the code.
+
+Source Code:
+
+File: configuration.nix
+{ pkgs, ... }:
 {
   nixpkgs.config.allowUnfree = true;
   nix.settings = {
     experimental-features = "nix-command flakes";
   };
-
   environment.systemPackages = [
     pkgs.vim
     pkgs.git
     pkgs.surrealdb
   ];
-
   fileSystems."/" = {
     device = "/dev/disk/by-label/nixos";
     fsType = "ext4";
@@ -25,15 +35,12 @@
       device = "/dev/disk/by-label/swap";
     }
   ];
-
   time.timeZone = "Europe/London"; # Adjust as needed
   i18n.defaultLocale = "en_US.UTF-8";
   console.keyMap = "us";
-
   boot.loader.grub.enable = true;
   boot.loader.grub.device = "/dev/sda";
   boot.initrd.availableKernelModules = [ "ahci" "xhci_pci" "virtio_pci" "virtio_scsi" "sd_mod" "sr_mod" "ext4" ];
-
   users.users = {
     root.hashedPassword = "!"; # Disable root login
     daniel = {
@@ -44,9 +51,7 @@
       ];
     };
   };
-
   security.sudo.wheelNeedsPassword = false;
-
   services.openssh = {
     enable = true;
     settings = {
@@ -55,7 +60,6 @@
       KbdInteractiveAuthentication = false;
     };
   };
-
   systemd.services.surrealdb = {
     description = "SurrealDB service";
     after = [ "network.target" ];
@@ -68,23 +72,20 @@
       StateDirectory = "surrealdb";
     };
   };
-
   users.users.surrealdb = {
     isSystemUser = true;
     group = "surrealdb";
     home = "/var/lib/surrealdb";
     createHome = true;
   };
-
   users.groups.surrealdb = {};
-
   systemd.services.visitflow = {
     description = "VisitFlow Backend service";
     after = [ "network.target" "surrealdb.service" ];
     wants = [ "surrealdb.service" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
-      # ExecStart will be overridden by flake.nix
+      ExecStart = "/var/lib/visitflow/visitflow-backend";
       Restart = "always";
       User = "visitflow";
       Group = "visitflow";
@@ -92,18 +93,34 @@
       EnvironmentFile = "/etc/visitflow/environment";
     };
   };
-
   users.users.visitflow = {
     isSystemUser = true;
     group = "visitflow";
     home = "/var/lib/visitflow";
     createHome = true;
   };
-
   users.groups.visitflow = {};
-
   # Open firewall for the application
   networking.firewall.allowedTCPPorts = [ 22 8080 8000 ];
-
   system.stateVersion = "25.05";
 }
+
+File: flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+  };
+  outputs = { nixpkgs, ... }: {
+    nixosConfigurations = {
+      hetzner-x86_64 = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ./configuration.nix
+        ];
+      };
+    };
+  };
+}
+
+
+=== End of Prompt ===
